@@ -13,13 +13,8 @@ Q = np.loadtxt(abs_file_path1, delimiter=",")
 points = np.copy(Q)
 n = len(Q[:,0])
 
-# center of cloud
-Xm = 1/n * sum(Q[:,0])
-Ym = 1/n * sum(Q[:,1])
-
-# move center to origin
-Q[:,0] = Q[:,0]-Xm
-Q[:,1] = Q[:,1]-Ym
+Xm, Ym = np.mean(Q, axis=0)
+Q = Q - [Xm, Ym]
 
 # SVD
 U, Sigma, V = lin.svd(Q)
@@ -52,7 +47,7 @@ plt.savefig('plt1.png')
 plt.show()
 
 # Aufgabe 4 Gesichtserkennung
-numberTrainPers = 30
+numberTrainPers = 20
 numberTrainPerPers = 5
 sizeOfImage = 56 * 68
 Q = np.zeros((0,sizeOfImage))
@@ -65,27 +60,58 @@ for j in range(1,numberTrainPers+1):
         faceVec = np.concatenate(image)
         Q = np.append(Q, [faceVec], axis=0)
 
+# center  cloud
+n, m = np.shape(Q)
+Q = Q - np.mean(Q, axis=0)
+
 U, Sigma, V = lin.svd(Q)
 
+
+def findFace(V, imagePath, dim=100):
+    image = plt.imread(imagePath)
+    ImageVec = np.concatenate(image)
+
+    # reduce number of used singular values
+    V = V[:, :dim]
+
+    # projection on subspace
+    Q, R = lin.qr(V)
+    alpha = solve_triangular(R, np.transpose(Q) @ ImageVec)
+
+    # reconstrucion of face
+    reconstVec = V @ alpha
+    reconstImage = np.array(np.split(reconstVec, 68))
+
+    # calculate error
+    error = sum(sum(np.abs(image - reconstImage) ** 2))
+    print("SSD: " + str(error))
+
+    return reconstImage, error
+
+
 # test gesicht f10
-rel_path = ("Daten/Gesichter/s35/f10.png")
-abs_file_path2 = os.path.join(script_dir, rel_path)
-image = plt.imread(abs_file_path2)
-testFaceVec = np.concatenate(image)     # <- = b
+rel_path = ("Daten/Gesichter/s30/f10.png")
+imagePath = os.path.join(script_dir, rel_path)
+origImage = plt.imread(imagePath)
+plt.subplot(2, len(testDimensions)+1, 1)
+plt.title("Original image")
+plt.imshow(origImage, cmap='gray')
 
-# reduce number of used singular values
-keepSV = 1000
-U = U[:,:keepSV]
-Sigma = Sigma[:keepSV]
-V = V[:,:keepSV]
+testDimensions = [5, 10, 15, 20, 30, 50, 100]
+errVec = []
 
-Q, R = lin.qr(V)
-alpha = solve_triangular(R,np.transpose(Q)@testFaceVec)
+for i in range(len(testDimensions)):
+    reconstImage, error = findFace(V, imagePath, testDimensions[i])
+    plt.subplot(2, len(testDimensions)+1, i+2)
+    plt.title("Dimension: " + str(testDimensions[i]))
+    plt.imshow(reconstImage, cmap='gray')
+    errVec.append(error)
 
-# reconstrucion of face
-reconst = V@alpha
-test = np.array(np.split(reconst,68))
 
-plt.imshow(test, cmap='gray')
+plt.subplot(2, 1, 2)
+plt.plot(testDimensions, errVec)
+plt.title("Error")
+plt.grid()
+
 plt.show()
 
