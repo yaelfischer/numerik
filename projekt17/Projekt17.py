@@ -62,7 +62,8 @@ for j in range(1,numberTrainPers+1):
 
 # center  cloud
 n, m = np.shape(Q)
-Q = Q - np.mean(Q, axis=0)
+meanImage = np.mean(Q, axis=0)
+Q = Q - meanImage
 
 U, Sigma, V = lin.svd(Q)
 
@@ -79,25 +80,27 @@ def findFace(V, imagePath, dim=100):
     alpha = solve_triangular(R, np.transpose(Q) @ ImageVec)
 
     # reconstrucion of face
-    reconstVec = V @ alpha
+    reconstVec = (V @ alpha)
     reconstImage = np.array(np.split(reconstVec, 68))
 
     # calculate error
-    error = sum(sum(np.abs(image - reconstImage) ** 2))
+    #error = sum(sum(np.abs(image - reconstImage) ** 2))
+    error = sum(map(sum, np.abs(image-reconstImage)**2))
     print("SSD: " + str(error))
 
     return reconstImage, error
 
 
 # test gesicht f10
-rel_path = ("Daten/Gesichter/s30/f10.png")
+testDimensions = [5, 10, 15, 20, 30, 50, 100, 1500, 3000]
+rel_path = ("Daten/Gesichter/s25/f10.png")
 imagePath = os.path.join(script_dir, rel_path)
 origImage = plt.imread(imagePath)
 plt.subplot(2, len(testDimensions)+1, 1)
 plt.title("Original image")
 plt.imshow(origImage, cmap='gray')
 
-testDimensions = [5, 10, 15, 20, 30, 50, 100]
+
 errVec = []
 
 for i in range(len(testDimensions)):
