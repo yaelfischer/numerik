@@ -1,8 +1,10 @@
 import numpy as np
 import os
 import numpy.linalg as lin
+import matplotlib
 import matplotlib.pyplot as plt
 from scipy.linalg import solve_triangular
+import statistics
 
 script_dir = os.path.dirname(__file__)
 rel_path = "Daten/datenPunkte.csv"
@@ -47,11 +49,12 @@ plt.savefig('plt1.png')
 plt.show()
 
 # Aufgabe 4 Gesichtserkennung
-numberTrainPers = 20
-numberTrainPerPers = 5
+numberTrainPers = 30
+numberTrainPerPers = 9
 sizeOfImage = 56 * 68
 Q = np.zeros((0,sizeOfImage))
 
+# Training data
 for j in range(1,numberTrainPers+1):
     for i in range(1,numberTrainPerPers+1):
         rel_path = ("Daten/Gesichter/s" + str(j) + "/f" + str(i) + ".png")
@@ -60,28 +63,25 @@ for j in range(1,numberTrainPers+1):
         faceVec = np.concatenate(image)
         Q = np.append(Q, [faceVec], axis=0)
 
+Q = Q.T
+
 # center  cloud
 n, m = np.shape(Q)
-meanImage = np.mean(Q, axis=0)
-Q = Q - meanImage
+meanImage = np.mean(Q, axis=1)
+Q = Q - np.tile(meanImage,(Q.shape[1],1)).T
 
-U, Sigma, V = lin.svd(Q)
+U, _, _ = lin.svd(Q, full_matrices=False)
 
+def findFace(U, image, dim=50):
+    imageVec = np.concatenate(image)
 
-def findFace(V, imagePath, dim=100):
-    image = plt.imread(imagePath)
-    ImageVec = np.concatenate(image)
+    imageTest = imageVec - meanImage
 
     # reduce number of used singular values
-    V = V[:, :dim]
+    Ur = U[:, :dim]
 
-    # projection on subspace
-    Q, R = lin.qr(V)
-    alpha = solve_triangular(R, np.transpose(Q) @ ImageVec)
-
-    # reconstrucion of face
-    reconstVec = (V @ alpha)
-    reconstImage = np.array(np.split(reconstVec, 68))
+    aprox = meanImage + Ur@(Ur.T@imageTest)
+    reconstImage = np.array(np.split(aprox, 68))
 
     # calculate error
     #error = sum(sum(np.abs(image - reconstImage) ** 2))
@@ -92,29 +92,91 @@ def findFace(V, imagePath, dim=100):
 
 
 # test gesicht f10
-testDimensions = [5, 10, 15, 20, 30, 50, 100, 1500, 3000]
-rel_path = ("Daten/Gesichter/s25/f10.png")
+testDimensions = [5, 15, 30, 100, 150, 200]
+rel_path = ("Daten/Gesichter/s37/f1.png")
 imagePath = os.path.join(script_dir, rel_path)
 origImage = plt.imread(imagePath)
 plt.subplot(2, len(testDimensions)+1, 1)
-plt.title("Original image")
+plt.title("Original")
 plt.imshow(origImage, cmap='gray')
-
+plt.xticks([])
+plt.yticks([])
 
 errVec = []
 
 for i in range(len(testDimensions)):
-    reconstImage, error = findFace(V, imagePath, testDimensions[i])
+    image = plt.imread(imagePath)
+    reconstImage, error = findFace(U, image, testDimensions[i])
     plt.subplot(2, len(testDimensions)+1, i+2)
-    plt.title("Dimension: " + str(testDimensions[i]))
+    plt.title("Dim: " + str(testDimensions[i]))
+    plt.xticks([])
+    plt.yticks([])
     plt.imshow(reconstImage, cmap='gray')
     errVec.append(error)
 
-
 plt.subplot(2, 1, 2)
 plt.plot(testDimensions, errVec)
-plt.title("Error")
+plt.xlabel('Dimension', fontsize=12)
+plt.ylabel('Abweichung', fontsize=12)
+plt.show()
 plt.grid()
 
+
+# Skyline
+faceWidth = 56
+skylineWidth = 400
+
+# rel_path = ("Daten/Gesichter/trainedFaces.png")
+rel_path = ("Daten/Gesichter/untrainedFaces.png")
+imagePath = os.path.join(script_dir, rel_path)
+skyline = plt.imread(imagePath)
+
+plt.subplot(2, 1, 1)
+#plt.title("FaceDetection")
+plt.imshow(skyline, cmap='gray')
+plt.yticks([])
+
+dimensions = [1,3,5]
+errMean = np.zeros((1,skylineWidth - faceWidth))
+errArray = np.zeros((len(dimensions),skylineWidth - faceWidth))
+i = 0
+
+plt.subplot(2, 1, 2)
+for dimension in dimensions:
+    skylineErr = []
+    for x in range(0, skylineWidth - faceWidth):
+        section = skyline[:,x:x+faceWidth]
+        reconstImage, error = findFace(U, section, dimension)
+        skylineErr.append(error)
+    errMean = np.add(errMean,np.array(skylineErr))
+    errArray[i] = np.array(skylineErr)
+    i += 1
+    plt.plot(range(skylineWidth - faceWidth), skylineErr)
+
+std = np.std(errArray[0:3,:], axis=0)
+
+plt.plot(range(skylineWidth - faceWidth), errMean[0,:]/len(dimensions), linestyle='dashed')
+
+leg = ["Dim "+str(x) for x in dimensions]
+leg.append("Dim mean")
+plt.legend(leg , loc="upper left")
+
+plt.xlabel('Position im Bild', fontsize=12)
+plt.ylabel('Abweichung', fontsize=12)
+
+# plt.subplot(4, 1, 3)
+# plt.plot(range(skylineWidth - faceWidth), std)
+# plt.plot(range(skylineWidth - faceWidth), std * (errArray[0,:]-40) / 50)
+# plt.subplot(4,1,4)
+# #plt.plot(range(skylineWidth - faceWidth), (std - std * (errArray[0,:]-40) / 50))
+# test = abs((np.diff(np.diff(errArray[0,:]))) / ((std * (errArray[0,:]-40) / 50))[:342])
+# test += 0.5 * test**0.01 / np.abs(np.diff(errArray[0,:]))[:342]
+# test /= max(test)
+# plt.plot(range(skylineWidth - faceWidth-2), test)
+# plt.title("Var")
+
 plt.show()
+plt.grid()
+
+
 
