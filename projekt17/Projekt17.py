@@ -48,13 +48,17 @@ plt.grid()
 plt.savefig('plt1.png')
 plt.show()
 
-# Aufgabe 4 Gesichtserkennung
+
+# Task 4 Facedetection
+
 numberTrainPers = 30
 numberTrainPerPers = 9
 sizeOfImage = 56 * 68
 Q = np.zeros((0,sizeOfImage))
 
+
 # Training data
+
 for j in range(1,numberTrainPers+1):
     for i in range(1,numberTrainPerPers+1):
         rel_path = ("Daten/Gesichter/s" + str(j) + "/f" + str(i) + ".png")
@@ -72,6 +76,9 @@ Q = Q - np.tile(meanImage,(Q.shape[1],1)).T
 
 U, _, _ = lin.svd(Q, full_matrices=False)
 
+
+# Function to Projection and error calculation
+
 def findFace(U, image, dim=50):
     imageVec = np.concatenate(image)
 
@@ -84,7 +91,6 @@ def findFace(U, image, dim=50):
     reconstImage = np.array(np.split(aprox, 68))
 
     # calculate error
-    #error = sum(sum(np.abs(image - reconstImage) ** 2))
     error = sum(map(sum, np.abs(image-reconstImage)**2))
     print("SSD: " + str(error))
 
@@ -114,7 +120,7 @@ for i in range(len(testDimensions)):
     plt.imshow(reconstImage, cmap='gray')
     errVec.append(error)
 
-plt.subplot(2, 1, 2)
+plt.subplot(3, 1, 2)
 plt.plot(testDimensions, errVec)
 plt.xlabel('Dimension', fontsize=12)
 plt.ylabel('Abweichung', fontsize=12)
@@ -123,25 +129,30 @@ plt.grid()
 
 
 # Skyline
+
 faceWidth = 56
 skylineWidth = 400
 
-# rel_path = ("Daten/Gesichter/trainedFaces.png")
+#rel_path = ("Daten/Gesichter/trainedFaces.png")
 rel_path = ("Daten/Gesichter/untrainedFaces.png")
+
 imagePath = os.path.join(script_dir, rel_path)
 skyline = plt.imread(imagePath)
 
-plt.subplot(2, 1, 1)
+plt.subplot(3, 1, 1)
 #plt.title("FaceDetection")
 plt.imshow(skyline, cmap='gray')
 plt.yticks([])
 
-dimensions = [1,3,5]
+dimensions = [1,3,4]
 errMean = np.zeros((1,skylineWidth - faceWidth))
 errArray = np.zeros((len(dimensions),skylineWidth - faceWidth))
 i = 0
 
-plt.subplot(2, 1, 2)
+
+# Project skyline and calculate error
+
+plt.subplot(3, 1, 2)
 for dimension in dimensions:
     skylineErr = []
     for x in range(0, skylineWidth - faceWidth):
@@ -153,27 +164,58 @@ for dimension in dimensions:
     i += 1
     plt.plot(range(skylineWidth - faceWidth), skylineErr)
 
-std = np.std(errArray[0:3,:], axis=0)
+
+# Plot data
 
 plt.plot(range(skylineWidth - faceWidth), errMean[0,:]/len(dimensions), linestyle='dashed')
 
 leg = ["Dim "+str(x) for x in dimensions]
 leg.append("Dim mean")
-plt.legend(leg , loc="upper left")
+plt.legend(leg, loc="upper left")
+plt.xlim([0, 400])
 
 plt.xlabel('Position im Bild', fontsize=12)
 plt.ylabel('Abweichung', fontsize=12)
 
-# plt.subplot(4, 1, 3)
-# plt.plot(range(skylineWidth - faceWidth), std)
-# plt.plot(range(skylineWidth - faceWidth), std * (errArray[0,:]-40) / 50)
-# plt.subplot(4,1,4)
-# #plt.plot(range(skylineWidth - faceWidth), (std - std * (errArray[0,:]-40) / 50))
-# test = abs((np.diff(np.diff(errArray[0,:]))) / ((std * (errArray[0,:]-40) / 50))[:342])
-# test += 0.5 * test**0.01 / np.abs(np.diff(errArray[0,:]))[:342]
-# test /= max(test)
-# plt.plot(range(skylineWidth - faceWidth-2), test)
-# plt.title("Var")
+
+# Calculate variance
+
+variance = []
+for point in errArray.T:
+    variance.append(np.var(point))
+variance = np.array(variance)
+
+
+# Detect faces from error data
+
+detect = []
+foundFaces = []
+for i, point in enumerate(variance):
+    if(variance[i] < 90 and errArray[0,i] < 95):
+        detect.append(errArray[0,i])
+    else:
+        if len(detect) != 0:
+            foundFaces.append(i - len(detect) + detect.index(min(detect)))
+        detect = []
+
+markedImg = skyline.copy()
+
+
+# Mark faces in image and Display
+
+FaceMarker = np.zeros(len(errArray[0]))
+for det in foundFaces:
+    FaceMarker[det] = errArray[0,det]
+    ## Add boxes to img
+    markedImg[:, det-1] = 1
+    markedImg[:, det+faceWidth-1] = 1
+    markedImg[0, det:det+faceWidth-1] = 1
+    markedImg[-1, det:det+faceWidth-1] = 1
+
+#plt.plot(range(skylineWidth - faceWidth), FaceMarker)
+
+plt.subplot(3, 1, 3)
+plt.imshow(markedImg, cmap='gray')
 
 plt.show()
 plt.grid()
