@@ -120,7 +120,7 @@ for i in range(len(testDimensions)):
     plt.imshow(reconstImage, cmap='gray')
     errVec.append(error)
 
-plt.subplot(3, 1, 2)
+plt.subplot(2, 1, 2)
 plt.plot(testDimensions, errVec)
 plt.xlabel('Dimension', fontsize=12)
 plt.ylabel('Abweichung', fontsize=12)
@@ -135,6 +135,7 @@ skylineWidth = 400
 
 #rel_path = ("Daten/Gesichter/trainedFaces.png")
 rel_path = ("Daten/Gesichter/untrainedFaces.png")
+#rel_path = ("Daten/Gesichter/ZHAW.png")
 
 imagePath = os.path.join(script_dir, rel_path)
 skyline = plt.imread(imagePath)
