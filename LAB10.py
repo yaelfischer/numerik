@@ -18,7 +18,7 @@ def ImpRK(anfangs, X, N, f, but):
     for i in range(N):
         x.append(x[i] + h)
         for j in range(s):
-            k[j] = sy.optimize.fsolve(lambda imp: f(x[i]+but[j,0]*h,y[i]+h*np.dot(but[j,1:j+1],k[0:j])+h*but[j,j+1]*imp)-imp, np.array([k[j-1]]))
+            k[j] = sy.optimize.fsolve(lambda imp: f(x[i]+but[j,0]*h,y[i]+h*np.dot(but[j,1:j+1],k[0:j])+h*but[j,j+1]*imp)-imp, np.array([k[j-1]]), xtol=1.49012e-12)
             counter += 1
 
         y.append(y[i] + h*np.dot(k,but[-1,1:]))
