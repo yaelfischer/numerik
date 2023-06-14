@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sy
 
-
 def SplineNat(points):
     # ind = np.lexsort((points[:,1],points[:,0]))
     # points = points[ind]
@@ -106,40 +105,13 @@ def getSupports(number, start = -5, stop = 5):
     x = np.arange(start, stop - stepSize, stepSize)
     return x
 
-def f(x):
-    y = 1/(1+x**2)
-    return y
+data = np.array([[2, 4, 6, 8, 10, 12, 14],
+                 [2, 3, 4, 2, 8,  7,  3]])
 
-x = getSupports(6,-5,5)
-y = f(x)
-plt.scatter(x,y)
-xx, yy = SplinePer(np.array([x,y]))
-plt.plot(xx, yy,)
-x = getSupports(9,-5,5)
-y = f(x)
-plt.scatter(x,y)
 
+xx, yy = SplineNat(data)
 plt.plot(xx, yy)
-x = getSupports(15,-5,5)
-y = f(x)
-plt.scatter(x,y)
-xx, yy = SplinePer(np.array([x,y]))
+plt.scatter(data[0],data[1])
+xx, yy = SplinePer(data)
 plt.plot(xx, yy)
-x = getSupports(200,-5,5)
-y = f(x)
-plt.plot(x, y)
-plt.legend(['n=6','n=6','n=9','n=9','n=15','n=15', 'alg'])
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
